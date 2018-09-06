@@ -1,0 +1,5 @@
+
+
+https://kubernetes.io/docs/admin/high-availability/building/
+
+https://kubernetes.io/docs/getting-started-guides/scratch/

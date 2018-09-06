@@ -1,0 +1,126 @@
+   ******* Master01 192.168.1.100 ********
+# curl -L https://github.com/coreos/etcd/releases/download/v3.0.7/etcd-v3.0.7-linux-amd64.tar.gz -o etcd-v3.0.7-linux-amd64.tar.gz 
+# tar xzvf etcd-v3.0.7-linux-amd64.tar.gz && cd etcd-v3.0.7-linux-amd64 
+# mkdir -p /opt/etcd/bin 
+# mkdir -p /opt/etcd/config/
+# cp etcd* /opt/etcd/bin/ 
+# mkdir -p /var/lib/etcd/
+# cat <<EOF | tee  /opt/etcd/config/etcd.conf
+
+        ETCD_DATA_DIR=/var/lib/etcd
+        ETCD_NAME=Master1
+        ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+        ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+        ETCD_INITIAL_CLUSTER_STATE=new
+        ETCD_INITIAL_CLUSTER=Master1=http://192.168.1.100:2380,Master2=http://192.168.1.101:2380
+        ETCD_INITIAL_ADVERTISE_PEER_URLS=http://192.168.1.100:2380
+        ETCD_ADVERTISE_CLIENT_URLS=http://192.168.1.100:2379
+        ETCD_HEARTBEAT_INTERVAL=6000
+        ETCD_ELECTION_TIMEOUT=30000
+        GOMAXPROCS=$(nproc)
+
+# cat <<EOF | tee /etc/systemd/system/etcd.service 
+
+        [Unit] 
+        Description=Etcd Server 
+        Documentation=https://github.com/coreos/etcd 
+        After=network.target 
+
+        [Service] 
+        User=root 
+        Type=simple 
+        EnvironmentFile=-/opt/etcd/config/etcd.conf 
+        ExecStart=/opt/etcd/bin/etcd 
+        Restart=on-failure 
+        RestartSec=10s 
+        LimitNOFILE=40000 
+
+        [Install] 
+        WantedBy=multi-user.target 
+
+# systemctl daemon-reload && systemctl enable etcd && systemctl start etcd
+# systemctl status etcd
+
+-----------------------------------------------------------------------------------------------------
+
+    ******* Master02 192.168.1.101 ********
+# curl -L https://github.com/coreos/etcd/releases/download/v3.0.7/etcd-v3.0.7-linux-amd64.tar.gz -o etcd-v3.0.7-linux-amd64.tar.gz 
+# tar xzvf etcd-v3.0.7-linux-amd64.tar.gz && cd etcd-v3.0.7-linux-amd64 
+# mkdir -p /opt/etcd/bin
+# mkdir -p /opt/etcd/config/ 
+# cp etcd* /opt/etcd/bin/
+# mkdir -p /var/lib/etcd/
+# cat <<EOF | tee /opt/etcd/config/etcd.conf
+
+        ETCD_DATA_DIR=/var/lib/etcd
+        ETCD_NAME=Master2
+        ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+        ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+        ETCD_INITIAL_CLUSTER_STATE=new
+        ETCD_INITIAL_CLUSTER=Master1=http://192.168.1.100:2380,Master2=http://192.168.1.101:2380,Master3=http://192.168.1.69:2380
+        ETCD_INITIAL_ADVERTISE_PEER_URLS=http://192.168.1.101:2380
+        ETCD_ADVERTISE_CLIENT_URLS=http://192.168.1.101:2379
+        ETCD_HEARTBEAT_INTERVAL=6000
+        ETCD_ELECTION_TIMEOUT=30000
+        GOMAXPROCS=$(nproc)
+
+# cat <<EOF | tee /etc/systemd/system/etcd.service
+        [Unit]
+        Description=Etcd Server
+        Documentation=https://github.com/coreos/etcd
+        After=network.target
+
+        [Service]
+        User=root
+        Type=simple
+        EnvironmentFile=-/opt/etcd/config/etcd.conf
+        ExecStart=/opt/etcd/bin/etcd
+        Restart=on-failure
+        RestartSec=10s
+        LimitNOFILE=40000
+
+        [Install]
+        WantedBy=multi-user.target
+# systemctl daemon-reload && systemctl enable etcd && systemctl start etcd 
+# systemctl status etcd
+--------------------------------------------------------------------------
+
+# curl -L https://github.com/coreos/etcd/releases/download/v3.0.7/etcd-v3.0.7-linux-amd64.tar.gz -o etcd-v3.0.7-linux-amd64.tar.gz 
+# tar xzvf etcd-v3.0.7-linux-amd64.tar.gz && cd etcd-v3.0.7-linux-amd64 
+# mkdir -p /opt/etcd/bin
+# mkdir -p /opt/etcd/config/ 
+# cp etcd* /opt/etcd/bin/
+# mkdir -p /var/lib/etcd/
+# cat <<EOF | tee /opt/etcd/config/etcd.conf
+
+        ETCD_DATA_DIR=/var/lib/etcd
+        ETCD_NAME=Master2
+        ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+        ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+        ETCD_INITIAL_CLUSTER_STATE=new
+        ETCD_INITIAL_CLUSTER=Master1=http://192.168.1.100:2380,Master2=http://192.168.1.101:2380,Master3=http://192.168.1.69:2380
+        ETCD_INITIAL_ADVERTISE_PEER_URLS=http://192.168.1.69:2380
+        ETCD_ADVERTISE_CLIENT_URLS=http://192.168.1.69:2379
+        ETCD_HEARTBEAT_INTERVAL=6000
+        ETCD_ELECTION_TIMEOUT=30000
+        GOMAXPROCS=$(nproc)
+
+# cat <<EOF | tee /etc/systemd/system/etcd.service
+        [Unit]
+        Description=Etcd Server
+        Documentation=https://github.com/coreos/etcd
+        After=network.target
+
+        [Service]
+        User=root
+        Type=simple
+        EnvironmentFile=-/opt/etcd/config/etcd.conf
+        ExecStart=/opt/etcd/bin/etcd
+        Restart=on-failure
+        RestartSec=10s
+        LimitNOFILE=40000
+
+        [Install]
+        WantedBy=multi-user.target
+# systemctl daemon-reload && systemctl enable etcd && systemctl start etcd 
+# systemctl status etcd

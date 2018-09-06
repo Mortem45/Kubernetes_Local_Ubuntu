@@ -1,0 +1,218 @@
+******* Esclavo01 192.168.1.102 ********
+
+# apt-get install -y docker.io
+# curl -L 'https://github.com/kubernetes/kubernetes/releases/download/v1.4.9/kubernetes.tar.gz' -O kubernetes.tar.gz 
+# tar xvf kubernetes.tar.gz && cd kubernetes 
+# tar xf ./server/kubernetes-server-linux-amd64.tar.gz -C /opt/ 
+# cat <<EOF | tee /srv/kubernetes/kubeconfig
+
+        apiVersion: v1
+        kind: Config
+        clusters:
+        - name: local
+        cluster:
+            certificate-authority: /srv/kubernetes/ca.crt
+        users:
+        - name: controllermanager
+        user:
+            client-certificate: /srv/kubernetes/node.crt
+            client-key: /srv/kubernetes/node.key
+        contexts:
+        - context:
+            cluster: local
+            user: controllermanager
+        name: kubelet-context
+        current-context: kubelet-context
+
+# cat <<EOF | tee /etc/systemd/system/kubelet.service
+
+        [Unit]
+        Description=Kubernetes Kubelet
+        After=docker.service
+        Requires=docker.service
+
+        [Service]
+        ExecStart=/opt/kubernetes/server/bin/kubelet \
+        --hostname-override=192.168.1.103 \
+        --api-servers=https://192.168.1.105:6443 \
+        --logtostderr=true \
+        --tls-cert-file=/srv/kubernetes/node.crt \
+        --tls-private-key-file=/srv/kubernetes/node.key \
+        --kubeconfig=/srv/kubernetes/kubeconfig
+
+        Restart=on-failure
+        KillMode=process
+
+        [Install]
+        WantedBy=multi-user.target
+
+# cat <<EOF | tee /etc/systemd/system/kube-proxy.service
+
+        [Unit]
+        Description=Kubernetes Proxy
+        After=network.target
+
+        [Service]
+        ExecStart=/opt/kubernetes/server/bin/kube-proxy \
+        --hostname-override=192.168.1.103 \
+        --master=https://192.168.1.105:6443 \
+        --kubeconfig=/srv/kubernetes/kubeconfig \
+        --logtostderr=true
+        Restart=on-failure
+
+        [Install]
+        WantedBy=multi-user.target
+
+# curl -L https://github.com/coreos/flannel/releases/download/v0.6.1/flannel-v0.6.1-linux-amd64.tar.gz -o flannel.tar.gz
+# mkdir -p /opt/flannel
+# tar xzf flannel.tar.gz -C /opt/flanne
+# cat <<EOF | tee /etc/systemd/system/flanneld.service
+        [Unit]
+        Description=Flanneld
+        Documentation=https://github.com/coreos/flannel
+        After=network.target
+        Before=docker.service
+
+        [Service]
+        User=root
+        ExecStart=/opt/flannel/flanneld \
+        --etcd-endpoints="http://192.168.1.100:2379,http://192.168.1.101:2379" \
+        --iface=192.168.1.102 \
+        --ip-masq
+        ExecStartPost=/bin/bash /opt/flannel/update_docker.sh
+        Restart=on-failure
+        Type=notify
+        LimitNOFILE=65536
+
+        [Install]
+        WantedBy=multi-user.target
+
+# cat <<EOF | tee /opt/flannel/update_docker.sh
+
+        source /run/flannel/subnet.env
+        sed -i "s|ExecStart=.*|ExecStart=\/usr\/bin\/dockerd -H tcp:\/\/127.0.0.1:4243 -H unix:\/\/\/var\/run\/docker.sock --bip=\${FLANNEL_SUBNET} --mtu=\${FLANNEL_MTU}|g" /lib/systemd/system/docker.service
+        rc=0
+        ip link show docker0 >/dev/null 2>&1 || rc="$?"
+        if [[ "$rc" -eq "0" ]]; then
+        ip link set dev docker0 down
+        ip link delete docker0
+        fi
+        systemctl daemon-reload
+
+# systemctl daemon-reload
+# for name in kubelet kube-proxy flanneld; do
+  systemctl enable $name
+  systemctl start $name
+done
+# systemctl restart docker
+
+------------------------------------------------------------------------------------------
+
+******* Esclavo02 192.168.1.103 **********************
+
+# apt-get install -y docker.io
+# curl -L 'https://github.com/kubernetes/kubernetes/releases/download/v1.4.9/kubernetes.tar.gz' -O kubernetes.tar.gz 
+# tar xvf  kubernetes.tar.gz && cd kubernetes 
+# tar xf ./server/kubernetes-server-linux-amd64.tar.gz -C /opt/
+# cat <<EOF | tee /srv/kubernetes/kubeconfig
+ 
+        apiVersion: v1
+        kind: Config
+        clusters:
+        - name: local
+        cluster:
+            certificate-authority: /srv/kubernetes/ca.crt
+        users:
+        - name: controllermanager
+        user:
+            client-certificate: /srv/kubernetes/node.crt
+            client-key: /srv/kubernetes/node.key
+        contexts:
+        - context:
+            cluster: local
+            user: controllermanager
+        name: kubelet-context
+        current-context: kubelet-context
+
+# cat <<EOF | tee /etc/systemd/system/kubelet.service
+
+        [Unit]
+        Description=Kubernetes Kubelet
+        After=docker.service
+        Requires=docker.service
+
+        [Service]
+        ExecStart=/opt/kubernetes/server/bin/kubelet \
+        --hostname-override=192.168.1.104 \
+        --api-servers=https://192.168.1.105:6443 \
+        --logtostderr=true \
+        --tls-cert-file=/srv/kubernetes/node.crt \
+        --tls-private-key-file=/srv/kubernetes/node.key \
+        --kubeconfig=/srv/kubernetes/kubeconfig
+
+        Restart=on-failure
+        KillMode=process
+
+        [Install]
+        WantedBy=multi-user.target
+
+# cat <<EOF | tee /etc/systemd/system/kube-proxy.service
+
+        [Unit]
+        Description=Kubernetes Proxy
+        After=network.target
+
+        [Service]
+        ExecStart=/opt/kubernetes/server/bin/kube-proxy \
+        --hostname-override=192.168.1.103 \
+        --master=https://192.168.1.105:6443 \
+        --kubeconfig=/srv/kubernetes/kubeconfig \
+        --logtostderr=true
+        Restart=on-failure
+
+        [Install]
+        WantedBy=multi-user.target
+
+# curl -L https://github.com/coreos/flannel/releases/download/v0.6.1/flannel-v0.6.1-linux-amd64.tar.gz -o flannel.tar.gz
+# mkdir -p /opt/flannel
+# tar xzf flannel.tar.gz -C /opt/flannel
+# cat <<EOF | tee /etc/systemd/system/flanneld.service
+
+        [Unit]
+        Description=Flanneld
+        Documentation=https://github.com/coreos/flannel
+        After=network.target
+        Before=docker.service
+
+        [Service]
+        User=root
+        ExecStart=/opt/flannel/flanneld \
+        --etcd-endpoints="http://192.168.1.100:2379,http://192.168.1.101:2379" \
+        --iface=192.168.1.103 \
+        --ip-masq
+        ExecStartPost=/bin/bash /opt/flannel/update_docker.sh
+        Restart=on-failure
+        Type=notify
+        LimitNOFILE=65536
+
+        [Install]
+        WantedBy=multi-user.target
+
+# cat <<EOF | tee /opt/flannel/update_docker.sh
+
+        source /run/flannel/subnet.env
+        sed -i "s|ExecStart=.*|ExecStart=\/usr\/bin\/dockerd -H tcp:\/\/127.0.0.1:4243 -H unix:\/\/\/var\/run\/docker.sock --bip=\${FLANNEL_SUBNET} --mtu=\${FLANNEL_MTU}|g" /lib/systemd/system/docker.service
+        rc=0
+        ip link show docker0 >/dev/null 2>&1 || rc="$?"
+        if [[ "$rc" -eq "0" ]]; then
+        ip link set dev docker0 down
+        ip link delete docker0
+        fi
+        systemctl daemon-reload
+
+# systemctl daemon-reload
+# for name in kubelet kube-proxy flanneld; do
+  systemctl enable $name
+  systemctl start $name
+  done
+# systemctl restart docker

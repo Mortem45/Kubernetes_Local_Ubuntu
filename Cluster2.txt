@@ -1,0 +1,99 @@
+  //////////////  EN TODOS LOS NODOS
+
+~# apt-get update && apt-get -y upgrade && apt-get -y dist-upgrade && apt -y autoremove && reboot
+
+~# curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+~# echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
+
+~# apt-get update && apt-get install -y docker.io kubelet kubeadm kubectl kubernetes-cni
+
+~# nano /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+ 	// escribi,os esto en ese archivo..
+        Environment="KUBELET_EXTRA_ARGS=--fail-swap-on=false"
+
+~# systemctl daemon-reload && systemctl restart kubelet
+
+~# systemctl status kubelet
+
+  //como usuario NO ROOT
+~$ sudo kubeadm init --pod-network-cidr=10.0.0.0/16
+  //copiar el token y guardarlo
+
+~$ mkdir -p $HOME/.kube
+
+~$ sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+
+~$ sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+~$ kubectl get nodes
+// Nodo aparece el nodo como "NotReady"
+
+// import documentacion de calico
+~$ kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml
+
+~$ kubectl get nodes
+// Nodo aparece el nodo como "Ready"
+
+
+///////// SOLO EN LOS ESCLAVOS
+~# <token generado anteriormente>
+
+///////  en el maesto
+~$ kubectl get nodes
+// los 3 tienen que estar en "Ready"
+
+
+
+/////////en el maestro sin ser ROOT
+~$ nano nginx_rc.yaml
+        apiVersion: v1
+        kind: ReplicationController
+        metadata:
+          name: nginx
+        spec:
+          replicas: 2
+          selector:
+            app: nginx
+          template:
+            metadata:
+              name: nginx
+              labels:
+                app: nginx
+            spec:
+              containers:
+              - name: nginx
+                image: nginx
+                ports:
+                - containerPort: 80
+
+~$ kubectl create namespace dashboard
+
+~$ kubectl apply -n dashboard -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+
+~$ kubectl get pods --all-namespaces | grep dashboard
+
+~$ nano dashboard.yaml
+          apiVersion: rbac.authorization.k8s.io/v1beta1
+          kind: ClusterRoleBinding
+          metadata:
+            name: kubernetes-dashboard
+            labels:
+              k8s-app: kubernetes-dashboard
+          roleRef:
+            apiGroup: rbac.authorization.k8s.io
+            kind: ClusterRole
+            name: cluster-admin
+          subjects:
+          - kind: ServiceAccount
+            name: kubernetes-dashboard
+            namespace: kube-system
+
+~$ kubectl apply -n dashboard -f dashboard.yaml
+
+~$ kubectl proxy --address 0.0.0.0 --accept-hosts='^*$'
+
+/// Dashboard listo
+
+se accede desde
+http://192.168.1.120:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/#!/login
